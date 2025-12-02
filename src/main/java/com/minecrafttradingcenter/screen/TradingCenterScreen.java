@@ -48,7 +48,7 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
         this.priceField.setMaxLength(10);
         this.priceField.setValue("1");
         this.priceField.setHint(Component.literal("Emeralds"));
-        this.addWidget(this.priceField);
+        this.addRenderableWidget(this.priceField);
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.minecrafttradingcenter.create_trade"), button -> {
             createTrade();
@@ -71,7 +71,7 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
         this.tradeMultiplierField.setMaxLength(10);
         this.tradeMultiplierField.setValue("1");
         this.tradeMultiplierField.setHint(Component.literal("x"));
-        this.addWidget(this.tradeMultiplierField);
+        this.addRenderableWidget(this.tradeMultiplierField);
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.minecrafttradingcenter.buy_trade"), button -> {
             executeTrade();
@@ -81,12 +81,18 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
         this.withdrawField.setMaxLength(10);
         this.withdrawField.setValue("0");
         this.withdrawField.setHint(Component.literal("Amount"));
-        this.addWidget(this.withdrawField);
+        this.addRenderableWidget(this.withdrawField);
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.minecrafttradingcenter.withdraw_emeralds"), button -> {
             withdrawEmeralds();
         }).bounds(leftPos + 209, topPos + 178, 80, 20).build());
     }
+
+	private void boxHelper(GuiGraphics guiGraphics, net.minecraft.client.gui.navigation.ScreenRectangle rect, int color) {
+		int size = 2;
+		guiGraphics.fill(rect.position().x(), rect.position().y(), rect.position().x() + size, rect.position().y() + size, color);
+		guiGraphics.fill(rect.position().x() + rect.width() - size, rect.position().y() + rect.height() - size, rect.position().x() + rect.width(), rect.position().y() + rect.height(), color);
+	}
 
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
@@ -101,6 +107,10 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
         // Draw trades list background - first 5 rows of upper grid (RGB 139,139,139)
         // Rows are 18 pixels tall, so 5 rows = 90 pixels, starting at y=18
         guiGraphics.fill(i + 7, j + 17, i + 7 + 9 * 18, j + 17 + 108, 0xFF8B8B8B);
+
+		// boxHelper(guiGraphics, priceField.getRectangle(), 0xff00ff00);
+		// boxHelper(guiGraphics, tradeMultiplierField.getRectangle(), 0xffff0000);
+		// boxHelper(guiGraphics, withdrawField.getRectangle(), 0xff0000ff);
     }
 
     @Override

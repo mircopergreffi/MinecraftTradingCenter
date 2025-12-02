@@ -100,7 +100,7 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
         
         // Draw trades list background - first 5 rows of upper grid (RGB 139,139,139)
         // Rows are 18 pixels tall, so 5 rows = 90 pixels, starting at y=18
-        guiGraphics.fill(i + 8, j + 18, i + 248, j + 108, 0xFF8B8B8B);
+        guiGraphics.fill(i + 7, j + 17, i + 7 + 9 * 18, j + 17 + 108, 0xFF8B8B8B);
     }
 
     @Override

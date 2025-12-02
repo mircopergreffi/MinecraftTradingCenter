@@ -15,20 +15,17 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 import java.util.List;
 
 public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMenu> {
     private static final ResourceLocation GUI_TEXTURE = new ResourceLocation("textures/gui/container/generic_54.png");
-    private EditBox wantedField;
-    private EditBox givenField;
+    private EditBox priceField;
     private EditBox withdrawField;
     private EditBox tradeMultiplierField;
     private int selectedTradeId = -1;
     private int scrollOffset = 0;
-    private static final int TRADES_PER_PAGE = 6;
-    private ItemStack selectedItemForTrade = ItemStack.EMPTY;
+    private static final int TRADES_PER_PAGE = 15; // Fits in 5 rows (18 pixels per row, ~12 pixels per trade entry)
 
     public TradingCenterScreen(TradingCenterMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -46,39 +43,31 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
         // Request trades from server when screen opens
         ModMessages.sendToServer(new RequestTradesPacket());
 
-        // Create Trade Section - Top Left
-        this.wantedField = new EditBox(this.font, leftPos + 10, topPos + 25, 60, 16, Component.literal("Emeralds"));
-        this.wantedField.setMaxLength(10);
-        this.wantedField.setValue("1");
-        this.wantedField.setHint(Component.literal("Emeralds"));
-        this.addWidget(this.wantedField);
+        // Price input field and Create Trade button - side by side at top
+        this.priceField = new EditBox(this.font, leftPos + 8, topPos + 6, 60, 16, Component.literal("Price"));
+        this.priceField.setMaxLength(10);
+        this.priceField.setValue("1");
+        this.priceField.setHint(Component.literal("Emeralds"));
+        this.addWidget(this.priceField);
 
-        this.givenField = new EditBox(this.font, leftPos + 80, topPos + 25, 60, 16, Component.literal("Count"));
-        this.givenField.setMaxLength(10);
-        this.givenField.setValue("1");
-        this.givenField.setHint(Component.literal("Count"));
-        this.addWidget(this.givenField);
-
-        // Buttons
         this.addRenderableWidget(Button.builder(Component.translatable("gui.minecrafttradingcenter.create_trade"), button -> {
             createTrade();
-        }).bounds(leftPos + 150, topPos + 23, 90, 20).build());
+        }).bounds(leftPos + 75, topPos + 4, 90, 20).build());
 
-        // Trade List Section - Middle
-        // Scroll buttons
+        // Scroll buttons for trade list (in the first 5 rows area)
         this.addRenderableWidget(Button.builder(Component.literal("▲"), button -> {
             if (scrollOffset > 0) scrollOffset--;
-        }).bounds(leftPos + 230, topPos + 50, 20, 20).build());
+        }).bounds(leftPos + 230, topPos + 20, 20, 20).build());
 
         this.addRenderableWidget(Button.builder(Component.literal("▼"), button -> {
             List<TradeEntry> trades = menu.getTrades();
             if (trades != null && scrollOffset + TRADES_PER_PAGE < trades.size()) {
                 scrollOffset++;
             }
-        }).bounds(leftPos + 230, topPos + 150, 20, 20).build());
+        }).bounds(leftPos + 230, topPos + 80, 20, 20).build());
 
-        // Buy Trade Section - Bottom Left
-        this.tradeMultiplierField = new EditBox(this.font, leftPos + 10, topPos + 180, 60, 16, Component.literal("Multiplier"));
+        // Buy Trade and Withdraw buttons - side by side at bottom
+        this.tradeMultiplierField = new EditBox(this.font, leftPos + 8, topPos + 180, 50, 16, Component.literal("Multiplier"));
         this.tradeMultiplierField.setMaxLength(10);
         this.tradeMultiplierField.setValue("1");
         this.tradeMultiplierField.setHint(Component.literal("x"));
@@ -86,10 +75,9 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.minecrafttradingcenter.buy_trade"), button -> {
             executeTrade();
-        }).bounds(leftPos + 80, topPos + 178, 80, 20).build());
+        }).bounds(leftPos + 65, topPos + 178, 80, 20).build());
 
-        // Bank Section - Bottom Right
-        this.withdrawField = new EditBox(this.font, leftPos + 170, topPos + 180, 60, 16, Component.literal("Amount"));
+        this.withdrawField = new EditBox(this.font, leftPos + 152, topPos + 180, 50, 16, Component.literal("Amount"));
         this.withdrawField.setMaxLength(10);
         this.withdrawField.setValue("0");
         this.withdrawField.setHint(Component.literal("Amount"));
@@ -97,7 +85,7 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.minecrafttradingcenter.withdraw_emeralds"), button -> {
             withdrawEmeralds();
-        }).bounds(leftPos + 170, topPos + 200, 80, 20).build());
+        }).bounds(leftPos + 209, topPos + 178, 80, 20).build());
     }
 
     @Override
@@ -110,19 +98,9 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
         guiGraphics.blit(GUI_TEXTURE, i, j, 0, 0, this.imageWidth, 125);
         guiGraphics.blit(GUI_TEXTURE, i, j + 125, 0, 126, this.imageWidth, 96);
         
-        // Draw separator lines
-        guiGraphics.fill(i + 8, j + 48, i + 248, j + 49, 0xFF000000);
-        guiGraphics.fill(i + 8, j + 48, i + 248, j + 47, 0xFF555555);
-        
-        // Draw trade list background
-        guiGraphics.fill(i + 8, j + 50, i + 230, j + 170, 0xFF1A1A1A);
-        guiGraphics.fill(i + 9, j + 51, i + 229, j + 169, 0xFF2A2A2A);
-        
-        // Draw selected item slot background (for creating trades)
-        if (!selectedItemForTrade.isEmpty()) {
-            guiGraphics.fill(i + 150, j + 48, i + 168, j + 66, 0xFF404040);
-            guiGraphics.fill(i + 151, j + 49, i + 167, j + 65, 0xFF606060);
-        }
+        // Draw trades list background - first 5 rows of upper grid (RGB 139,139,139)
+        // Rows are 18 pixels tall, so 5 rows = 90 pixels, starting at y=18
+        guiGraphics.fill(i + 8, j + 18, i + 248, j + 108, 0xFF8B8B8B);
     }
 
     @Override
@@ -130,59 +108,46 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
         // Title
         guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0x404040, false);
         
-        // Section headers
-        guiGraphics.drawString(this.font, Component.translatable("gui.minecrafttradingcenter.create_trade"), leftPos + 10, topPos + 12, 0xFFFFFF, false);
-        guiGraphics.drawString(this.font, Component.translatable("gui.minecrafttradingcenter.wanted"), leftPos + 10, topPos + 35, 0xC0C0C0, false);
-        guiGraphics.drawString(this.font, Component.translatable("gui.minecrafttradingcenter.given"), leftPos + 80, topPos + 35, 0xC0C0C0, false);
-        
-        // Available Trades header
-        guiGraphics.drawString(this.font, Component.translatable("gui.minecrafttradingcenter.available"), leftPos + 10, topPos + 52, 0xFFFFFF, false);
-        
-        // Trade list
+        // Trade list - rendered in first 5 rows of upper grid (y=18 to y=108, 90 pixels total)
         List<TradeEntry> trades = menu.getTrades();
         if (trades != null && !trades.isEmpty()) {
-            int yOffset = 65;
+            int startY = topPos + 20; // Start slightly below the top of the background
             int endIndex = Math.min(scrollOffset + TRADES_PER_PAGE, trades.size());
             for (int i = scrollOffset; i < endIndex; i++) {
                 TradeEntry trade = trades.get(i);
-                int y = yOffset + (i - scrollOffset) * 16;
+                int y = startY + (i - scrollOffset) * 6; // 6 pixels per line to fit in 5 rows (90 pixels / 15 = 6)
                 
-                // Highlight selected trade
-                if (selectedTradeId == trade.getTradeId()) {
-                    guiGraphics.fill(leftPos + 8, topPos + y - 1, leftPos + 230, topPos + y + 15, 0x40FFFFFF);
+                // Only render if within the first 5 rows (y < 108)
+                if (y < topPos + 108) {
+                    // Highlight selected trade
+                    if (selectedTradeId == trade.getTradeId()) {
+                        guiGraphics.fill(leftPos + 8, topPos + y - 1, leftPos + 248, topPos + y + 5, 0x40FFFFFF);
+                    }
+                    
+                    // Draw trade info (compact format)
+                    String sellerText = trade.getSeller().length() > 8 ? trade.getSeller().substring(0, 8) + "..." : trade.getSeller();
+                    String itemName = trade.getGiven().getDisplayName().getString();
+                    if (itemName.length() > 12) itemName = itemName.substring(0, 12) + "...";
+                    
+                    int color = (selectedTradeId == trade.getTradeId()) ? 0x00FF00 : 0xFFFFFF;
+                    guiGraphics.drawString(this.font, 
+                        String.format("%d em × %d %s [%d/%d] - %s", 
+                            trade.getWanted(), 
+                            trade.getGiven().getCount(), 
+                            itemName,
+                            trade.getAvailableTrades(),
+                            trade.getTrades(),
+                            sellerText),
+                        leftPos + 10, topPos + y, color, false);
                 }
-                
-                // Draw trade info
-                String sellerText = trade.getSeller().length() > 12 ? trade.getSeller().substring(0, 12) + "..." : trade.getSeller();
-                String itemName = trade.getGiven().getDisplayName().getString();
-                if (itemName.length() > 15) itemName = itemName.substring(0, 15) + "...";
-                
-                int color = (selectedTradeId == trade.getTradeId()) ? 0x00FF00 : 0xFFFFFF;
-                guiGraphics.drawString(this.font, 
-                    String.format("%d em × %d %s (%d/%d)", 
-                        trade.getWanted(), 
-                        trade.getGiven().getCount(), 
-                        itemName,
-                        trade.getAvailableTrades(),
-                        trade.getTrades()),
-                    leftPos + 10, topPos + y, color, false);
-                
-                // Draw seller name in smaller text
-                guiGraphics.drawString(this.font, sellerText, leftPos + 10, topPos + y + 9, 0x888888, false);
             }
         } else {
-            guiGraphics.drawString(this.font, Component.translatable("gui.minecrafttradingcenter.no_trades"), leftPos + 10, topPos + 65, 0x888888, false);
+            guiGraphics.drawString(this.font, Component.translatable("gui.minecrafttradingcenter.no_trades"), leftPos + 10, topPos + 30, 0x888888, false);
         }
 
-        // Bank balance
+        // Bank balance - show near trade item slot
         int bankBalance = menu.getBankBalance();
-        guiGraphics.drawString(this.font, Component.translatable("gui.minecrafttradingcenter.bank_balance") + ": " + bankBalance, leftPos + 170, topPos + 165, 0x00FF00, false);
-        
-        // Draw selected item for trade creation
-        if (!selectedItemForTrade.isEmpty()) {
-            guiGraphics.renderItem(selectedItemForTrade, leftPos + 152, topPos + 50);
-            guiGraphics.renderItemDecorations(this.font, selectedItemForTrade, leftPos + 152, topPos + 50);
-        }
+        guiGraphics.drawString(this.font, Component.translatable("gui.minecrafttradingcenter.bank_balance") + ": " + bankBalance, leftPos + 35, topPos + 112, 0x00FF00, false);
     }
 
     @Override
@@ -194,12 +159,12 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
         // Render tooltips for trade entries
         List<TradeEntry> trades = menu.getTrades();
         if (trades != null) {
-            int yOffset = 65;
+            int startY = topPos + 20;
             int endIndex = Math.min(scrollOffset + TRADES_PER_PAGE, trades.size());
             for (int i = scrollOffset; i < endIndex; i++) {
                 TradeEntry trade = trades.get(i);
-                int y = topPos + yOffset + (i - scrollOffset) * 16;
-                if (mouseX >= leftPos + 8 && mouseX < leftPos + 230 && mouseY >= y && mouseY < y + 16) {
+                int y = startY + (i - scrollOffset) * 6;
+                if (y < topPos + 108 && mouseX >= leftPos + 8 && mouseX < leftPos + 248 && mouseY >= topPos + y && mouseY < topPos + y + 6) {
                     guiGraphics.renderTooltip(this.font, 
                         List.of(
                             Component.literal("Seller: " + trade.getSeller()),
@@ -216,7 +181,7 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (wantedField.isFocused() || givenField.isFocused() || withdrawField.isFocused() || tradeMultiplierField.isFocused()) {
+        if (priceField.isFocused() || withdrawField.isFocused() || tradeMultiplierField.isFocused()) {
             return super.keyPressed(keyCode, scanCode, modifiers);
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
@@ -228,10 +193,7 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
             return true;
         }
 
-        if (wantedField.mouseClicked(mouseX, mouseY, button)) {
-            return true;
-        }
-        if (givenField.mouseClicked(mouseX, mouseY, button)) {
+        if (priceField.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
         if (withdrawField.mouseClicked(mouseX, mouseY, button)) {
@@ -241,36 +203,17 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
             return true;
         }
 
-        // Click on trade row to select
+        // Click on trade row to select (in the first 5 rows area)
         List<TradeEntry> trades = menu.getTrades();
         if (trades != null) {
-            int yOffset = 65;
+            int startY = topPos + 20;
             int endIndex = Math.min(scrollOffset + TRADES_PER_PAGE, trades.size());
             for (int i = scrollOffset; i < endIndex; i++) {
                 TradeEntry trade = trades.get(i);
-                int y = topPos + yOffset + (i - scrollOffset) * 16;
-                if (mouseX >= leftPos + 8 && mouseX < leftPos + 230 && mouseY >= y && mouseY < y + 16) {
+                int y = startY + (i - scrollOffset) * 6;
+                if (y < topPos + 108 && mouseX >= leftPos + 8 && mouseX < leftPos + 248 && mouseY >= topPos + y && mouseY < topPos + y + 6) {
                     selectedTradeId = trade.getTradeId();
                     return true;
-                }
-            }
-        }
-        
-        // Click on inventory to select item for trade
-        if (mouseX >= leftPos + 8 && mouseX < leftPos + 176 && mouseY >= topPos + 84 && mouseY < topPos + 240) {
-            // Calculate which slot was clicked
-            int slotX = (int)(mouseX - leftPos - 8) / 18;
-            int slotY = (int)(mouseY - topPos - 84) / 18;
-            if (slotX >= 0 && slotX < 9 && slotY >= 0 && slotY < 3) {
-                int slotIndex = slotY * 9 + slotX + 9; // +9 to skip hotbar
-                Inventory inventory = menu.getPlayer().getInventory();
-                if (slotIndex < inventory.getContainerSize()) {
-                    ItemStack stack = inventory.getItem(slotIndex);
-                    if (!stack.isEmpty()) {
-                        selectedItemForTrade = stack.copy();
-                        selectedItemForTrade.setCount(1);
-                        return true;
-                    }
                 }
             }
         }
@@ -280,36 +223,33 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
 
     private void createTrade() {
         try {
-            int wanted = Integer.parseInt(wantedField.getValue());
-            int givenCount = Integer.parseInt(givenField.getValue());
-
-            if (wanted <= 0 || givenCount <= 0) {
+            int price = Integer.parseInt(priceField.getValue());
+            if (price <= 0) {
                 return;
             }
 
-            if (selectedItemForTrade.isEmpty()) {
-                // Try to find item in inventory
-                selectedItemForTrade = findItemInInventory();
-                if (selectedItemForTrade.isEmpty()) {
-                    return;
-                }
-            }
-
-            // Verify we have enough items
-            int availableCount = countItemsInInventory(selectedItemForTrade.getItem());
-            if (availableCount < givenCount) {
+            ItemStack tradeItem = menu.getTradeItem();
+            if (tradeItem.isEmpty()) {
                 return;
             }
 
-            // Create the trade packet
-            ItemStack tradeItem = selectedItemForTrade.copy();
-            tradeItem.setCount(givenCount);
-            ModMessages.sendToServer(new CreateTradePacket(wanted, givenCount, tradeItem));
+            int itemCount = tradeItem.getCount();
+            if (itemCount <= 0) {
+                return;
+            }
+
+            // Count how many of this item the player has in inventory
+            int availableCount = countItemsInInventory(tradeItem.getItem());
+            if (availableCount < itemCount) {
+                return;
+            }
+
+            // Create the trade packet - use the item from the slot and the price
+            ItemStack tradeItemCopy = tradeItem.copy();
+            ModMessages.sendToServer(new CreateTradePacket(price, itemCount, tradeItemCopy));
             
-            // Clear fields after creating
-            wantedField.setValue("1");
-            givenField.setValue("1");
-            selectedItemForTrade = ItemStack.EMPTY;
+            // Clear the price field after creating (slot will be cleared when items are removed)
+            priceField.setValue("1");
         } catch (NumberFormatException e) {
             // Invalid input
         }
@@ -324,6 +264,27 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
             int multiplier = Integer.parseInt(tradeMultiplierField.getValue());
             if (multiplier <= 0) {
                 return;
+            }
+            
+            // Verify trade still exists and has enough available
+            List<TradeEntry> trades = menu.getTrades();
+            if (trades != null) {
+                TradeEntry selectedTrade = null;
+                for (TradeEntry trade : trades) {
+                    if (trade.getTradeId() == selectedTradeId) {
+                        selectedTrade = trade;
+                        break;
+                    }
+                }
+                
+                if (selectedTrade == null) {
+                    selectedTradeId = -1;
+                    return;
+                }
+                
+                if (selectedTrade.getAvailableTrades() < multiplier) {
+                    return;
+                }
             }
 
             ModMessages.sendToServer(new ExecuteTradePacket(selectedTradeId, multiplier));
@@ -344,17 +305,6 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
         }
     }
 
-    private ItemStack findItemInInventory() {
-        Inventory inventory = menu.getPlayer().getInventory();
-        for (int i = 0; i < inventory.getContainerSize(); i++) {
-            ItemStack stack = inventory.getItem(i);
-            if (!stack.isEmpty() && !stack.is(Items.EMERALD)) {
-                return stack;
-            }
-        }
-        return ItemStack.EMPTY;
-    }
-
     private int countItemsInInventory(net.minecraft.world.item.Item item) {
         Inventory inventory = menu.getPlayer().getInventory();
         int count = 0;
@@ -363,6 +313,11 @@ public class TradingCenterScreen extends AbstractContainerScreen<TradingCenterMe
             if (!stack.isEmpty() && stack.is(item)) {
                 count += stack.getCount();
             }
+        }
+        // Also count the item in the trade slot
+        ItemStack tradeItem = menu.getTradeItem();
+        if (!tradeItem.isEmpty() && tradeItem.is(item)) {
+            count += tradeItem.getCount();
         }
         return count;
     }

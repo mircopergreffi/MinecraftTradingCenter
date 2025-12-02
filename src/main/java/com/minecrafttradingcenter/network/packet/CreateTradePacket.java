@@ -45,11 +45,12 @@ public class CreateTradePacket {
             if (player != null && player.level() instanceof ServerLevel serverLevel) {
                 TradingCenterData data = TradingCenterData.get(serverLevel);
                 
-                // Count items in player's inventory
+                // Count items in player's inventory (including what's in the trade slot)
                 int availableCount = 0;
                 ItemStack searchItem = givenItem.copy();
                 searchItem.setCount(1);
                 
+                // Count from inventory
                 for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
                     ItemStack stack = player.getInventory().getItem(i);
                     if (!stack.isEmpty() && ItemStack.isSameItemSameTags(stack, searchItem)) {
@@ -57,6 +58,7 @@ public class CreateTradePacket {
                     }
                 }
                 
+                // Calculate how many trades can be made
                 int calculatedTradeCount = availableCount / givenCount;
                 
                 if (calculatedTradeCount > 0 && availableCount >= givenCount * calculatedTradeCount) {
@@ -71,7 +73,7 @@ public class CreateTradePacket {
                         }
                     }
                     
-                    // Create trade
+                    // Create trade - use the givenCount as the amount per trade
                     ItemStack tradeItem = givenItem.copy();
                     tradeItem.setCount(givenCount);
                     data.createTrade(player.getScoreboardName(), wanted, tradeItem, calculatedTradeCount);

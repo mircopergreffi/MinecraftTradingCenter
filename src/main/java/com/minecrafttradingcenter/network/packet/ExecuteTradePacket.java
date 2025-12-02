@@ -40,54 +40,63 @@ public class ExecuteTradePacket {
                 TradingCenterData data = TradingCenterData.get(serverLevel);
                 TradeEntry trade = data.getTrade(tradeId);
                 
-                if (trade != null && trade.getAvailableTrades() >= multiplier) {
-                    int requiredEmeralds = trade.getWanted() * multiplier;
-                    
-                    // Count emeralds in player's inventory
-                    int emeraldCount = 0;
-                    for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-                        ItemStack stack = player.getInventory().getItem(i);
-                        if (!stack.isEmpty() && stack.is(Items.EMERALD)) {
-                            emeraldCount += stack.getCount();
-                        }
-                    }
-                    
-                    if (emeraldCount >= requiredEmeralds) {
-                        // Remove emeralds
-                        int toRemove = requiredEmeralds;
-                        for (int i = 0; i < player.getInventory().getContainerSize() && toRemove > 0; i++) {
-                            ItemStack stack = player.getInventory().getItem(i);
-                            if (!stack.isEmpty() && stack.is(Items.EMERALD)) {
-                                int removeAmount = Math.min(stack.getCount(), toRemove);
-                                stack.shrink(removeAmount);
-                                toRemove -= removeAmount;
-                            }
-                        }
-                        
-                        // Give items
-                        ItemStack givenItem = trade.getGiven();
-                        int totalGiven = givenItem.getCount() * multiplier;
-                        ItemStack toGive = givenItem.copy();
-                        toGive.setCount(Math.min(toGive.getMaxStackSize(), totalGiven));
-                        
-                        while (totalGiven > 0) {
-                            int stackSize = Math.min(toGive.getMaxStackSize(), totalGiven);
-                            ItemStack stack = givenItem.copy();
-                            stack.setCount(stackSize);
-                            if (!player.getInventory().add(stack)) {
-                                player.drop(stack, false);
-                            }
-                            totalGiven -= stackSize;
-                        }
-                        
-                        // Execute trade
-                        data.executeTrade(tradeId, multiplier);
-                        
-                        // Send updated trades
-                        int bankBalance = data.getBankBalance(player.getScoreboardName());
-                        ModMessages.sendToPlayer(new SendTradesPacket(data.getAllTrades(), bankBalance), player);
+                if (trade == null) {
+                    // Trade doesn't exist
+                    return;
+                }
+                
+                if (trade.getAvailableTrades() < multiplier) {
+                    // Not enough available trades
+                    return;
+                }
+                
+                int requiredEmeralds = trade.getWanted() * multiplier;
+                
+                // Count emeralds in player's inventory
+                int emeraldCount = 0;
+                for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                    ItemStack stack = player.getInventory().getItem(i);
+                    if (!stack.isEmpty() && stack.is(Items.EMERALD)) {
+                        emeraldCount += stack.getCount();
                     }
                 }
+                
+                if (emeraldCount < requiredEmeralds) {
+                    // Not enough emeralds
+                    return;
+                }
+                
+                // Remove emeralds
+                int toRemove = requiredEmeralds;
+                for (int i = 0; i < player.getInventory().getContainerSize() && toRemove > 0; i++) {
+                    ItemStack stack = player.getInventory().getItem(i);
+                    if (!stack.isEmpty() && stack.is(Items.EMERALD)) {
+                        int removeAmount = Math.min(stack.getCount(), toRemove);
+                        stack.shrink(removeAmount);
+                        toRemove -= removeAmount;
+                    }
+                }
+                
+                // Give items
+                ItemStack givenItem = trade.getGiven();
+                int totalGiven = givenItem.getCount() * multiplier;
+                
+                while (totalGiven > 0) {
+                    int stackSize = Math.min(givenItem.getMaxStackSize(), totalGiven);
+                    ItemStack stack = givenItem.copy();
+                    stack.setCount(stackSize);
+                    if (!player.getInventory().add(stack)) {
+                        player.drop(stack, false);
+                    }
+                    totalGiven -= stackSize;
+                }
+                
+                // Execute trade
+                data.executeTrade(tradeId, multiplier);
+                
+                // Send updated trades
+                int bankBalance = data.getBankBalance(player.getScoreboardName());
+                ModMessages.sendToPlayer(new SendTradesPacket(data.getAllTrades(), bankBalance), player);
             }
         });
         return true;

@@ -1,0 +1,25 @@
+{
+  "item.minecrafttradingcenter.trading_laptop": "Trading Laptop",
+  "gui.minecrafttradingcenter.trading_center": "Trading Center",
+  "gui.minecrafttradingcenter.create_trade": "Create Trade",
+  "gui.minecrafttradingcenter.buy_trade": "Buy",
+  "gui.minecrafttradingcenter.withdraw_emeralds": "Withdraw Emeralds",
+  "gui.minecrafttradingcenter.seller": "Seller",
+  "gui.minecrafttradingcenter.wanted": "Wanted (Emeralds)",
+  "gui.minecrafttradingcenter.given": "Given (Items)",
+  "gui.minecrafttradingcenter.available": "Available",
+  "gui.minecrafttradingcenter.completed": "Completed",
+  "gui.minecrafttradingcenter.bank_balance": "Bank Balance",
+  "gui.minecrafttradingcenter.enter_wanted": "Enter emerald amount",
+  "gui.minecrafttradingcenter.enter_given": "Enter item count",
+  "gui.minecrafttradingcenter.deposit_items": "Deposit items (multiple of Given)",
+  "gui.minecrafttradingcenter.select_trade": "Select a trade to buy",
+  "gui.minecrafttradingcenter.no_trades": "No trades available",
+  "gui.minecrafttradingcenter.trade_created": "Trade created successfully",
+  "gui.minecrafttradingcenter.trade_executed": "Trade executed successfully",
+  "gui.minecrafttradingcenter.insufficient_items": "Insufficient items deposited",
+  "gui.minecrafttradingcenter.insufficient_emeralds": "Insufficient emeralds",
+  "gui.minecrafttradingcenter.invalid_amount": "Invalid amount",
+  "gui.minecrafttradingcenter.max_trades_reached": "Maximum trades reached"
+}
+
